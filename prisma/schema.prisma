@@ -1,0 +1,78 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Doctor {
+  id           String   @id @default(cuid())
+  name         String
+  departmentId String
+  title        String
+  introduction String
+  imageUrl     String
+  isAvailable  Boolean  @default(true)
+  
+  // Relations
+  department   Department @relation(fields: [departmentId], references: [id])
+  specialties  Specialty[]
+  schedules    Schedule[]
+}
+
+model Department {
+  id          String   @id // User provided ID like 'obgyn'
+  name        String
+  description String
+  icon        String
+  
+  doctors     Doctor[]
+}
+
+model Specialty {
+  id        String   @id @default(cuid())
+  name      String
+  
+  // Implicit many-to-many would be ideal, but for seed simplicity let's do explicit or just simple list
+  // Actually, a doctor has many specialties, a specialty might belong to many doctors.
+  // But to keep it simple and matching the string[] in frontend types, let's just use a simple relation or even simpler:
+  // For SQLite limitation of scalar lists, we need this table.
+  doctors   Doctor[]
+}
+
+model Schedule {
+  id              String   @id @default(cuid())
+  date            DateTime
+  timeSlot        String   // 'Morning' | 'Afternoon' | 'Evening'
+  startTime       String
+  endTime         String
+  maxPatients     Int
+  currentPatients Int      @default(0)
+  isAvailable     Boolean  @default(true)
+  
+  doctorId        String
+  doctor          Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  
+  appointments    Appointment[]
+}
+
+model Appointment {
+  id          String   @id @default(cuid())
+  status      String   // 'Pending' | 'Confirmed' | 'Cancelled'
+  createdAt   DateTime @default(now())
+  
+  // Patient Info (Embedded for simplicity, or could be a separate Patient relationship)
+  patientName      String
+  patientIdNumber  String
+  patientBirthDate String
+  patientPhone     String
+  patientEmail     String?
+  
+  scheduleId  String
+  schedule    Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+}
